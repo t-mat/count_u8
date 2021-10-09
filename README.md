@@ -24,9 +24,45 @@ predefined symbols such as `__SSE2__`, `_M_X64`.
 
 ## Benchmark
 
+### gcc
+
 ```
-$ gcc count_u8_bench.c && ./a.out
-Scalar  in 2.20600 sec, speed  100.00%
-SSE2    in 0.14200 sec, speed 1553.52%
-Default in 0.13500 sec, speed 1634.07%
+$ gcc-11 -O3 count_u8_bench.c && ./a.out
+Scalar  in 1.75201 sec, speed  100.00%
+SSE2    in 0.18753 sec, speed  934.26%
+Default in 0.19031 sec, speed  920.61%
+```
+
+```
+$ gcc-9 -O3 count_u8_bench.c && ./a.out
+Scalar  in 1.85213 sec, speed  100.00%
+SSE2    in 0.14778 sec, speed 1253.31%
+Default in 0.15283 sec, speed 1211.86%
+```
+
+
+### clang
+
+```
+$ clang-12 -O3 count_u8_bench.c && ./a.out
+Scalar  in 3.50516 sec, speed  100.00%
+SSE2    in 0.15010 sec, speed 2335.19%
+Default in 0.15099 sec, speed 2321.46%
+```
+
+```
+$ clang-10 -O3 count_u8_bench.c && ./a.out
+Scalar  in 2.87657 sec, speed  100.00%
+SSE2    in 0.16849 sec, speed 1707.28%
+Default in 0.16848 sec, speed 1707.33%
+```
+
+
+## MSVC
+
+```
+# MSVC 2019
+Scalar  in 2.19493 sec, speed  100.00%
+SSE2    in 0.15442 sec, speed 1421.39%
+Default in 0.15047 sec, speed 1458.67%
 ```
