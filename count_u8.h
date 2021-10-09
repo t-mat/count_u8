@@ -31,7 +31,7 @@
 //
 //  SPDX-FileCopyrightText: Copyright (c) Takayuki Matsuoka
 //  SPDX-License-Identifier: CC0-1.0
-//	https://creativecommons.org/publicdomain/zero/1.0/
+//  https://creativecommons.org/publicdomain/zero/1.0/
 
 #ifndef COUNT_U8_H
 #define COUNT_U8_H
