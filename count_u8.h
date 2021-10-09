@@ -31,7 +31,7 @@
 //
 //  SPDX-FileCopyrightText: Copyright (c) Takayuki Matsuoka
 //  SPDX-License-Identifier: CC0-1.0
-//	https://spdx.org/licenses/CC0-1.0
+//  https://spdx.org/licenses/CC0-1.0
 //  https://creativecommons.org/publicdomain/zero/1.0/
 
 #ifndef COUNT_U8_H
@@ -105,7 +105,10 @@ static inline size_t count_u8_sse2(const void* src, size_t srcSize, uint8_t valu
 
     uint64_t simdPartCounter = 0;
     {
-        __m128i         sum_64x2    = _mm_setzero_si128();
+        __m128i         sum0_64x2   = _mm_setzero_si128();
+        __m128i         sum1_64x2   = _mm_setzero_si128();
+        __m128i         sum2_64x2   = _mm_setzero_si128();
+        __m128i         sum3_64x2   = _mm_setzero_si128();
         const __m128i   c_8x16      = _mm_set1_epi8((char) value);
         const __m128i   ofs_8x16    = _mm_set1_epi8((char) ofs);
 
@@ -130,15 +133,21 @@ static inline size_t count_u8_sse2(const void* src, size_t srcSize, uint8_t valu
             const __m128i   horsum2_64x2    = _mm_sad_epu8(cmp2_8x16, ofs_8x16);
             const __m128i   horsum3_64x2    = _mm_sad_epu8(cmp3_8x16, ofs_8x16);
 
-            sum_64x2 = _mm_add_epi64(sum_64x2, horsum0_64x2);
-            sum_64x2 = _mm_add_epi64(sum_64x2, horsum1_64x2);
-            sum_64x2 = _mm_add_epi64(sum_64x2, horsum2_64x2);
-            sum_64x2 = _mm_add_epi64(sum_64x2, horsum3_64x2);
+            sum0_64x2 = _mm_add_epi64(sum0_64x2, horsum0_64x2);
+            sum1_64x2 = _mm_add_epi64(sum1_64x2, horsum1_64x2);
+            sum2_64x2 = _mm_add_epi64(sum2_64x2, horsum2_64x2);
+            sum3_64x2 = _mm_add_epi64(sum3_64x2, horsum3_64x2);
         }
 
-        uint64_t counters[2];
-        _mm_storeu_si128((__m128i*) counters, sum_64x2);
-        simdPartCounter = (counters[0] + counters[1]);
+        uint64_t counters0[2]; _mm_storeu_si128((__m128i*) counters0, sum0_64x2);
+        uint64_t counters1[2]; _mm_storeu_si128((__m128i*) counters1, sum1_64x2);
+        uint64_t counters2[2]; _mm_storeu_si128((__m128i*) counters2, sum2_64x2);
+        uint64_t counters3[2]; _mm_storeu_si128((__m128i*) counters3, sum3_64x2);
+
+        simdPartCounter  = (counters0[0] + counters0[1]);
+        simdPartCounter += (counters1[0] + counters1[1]);
+        simdPartCounter += (counters2[0] + counters2[1]);
+        simdPartCounter += (counters3[0] + counters3[1]);
     }
 
     uint64_t lastPartCounter = 0;
