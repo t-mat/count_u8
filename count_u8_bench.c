@@ -1,8 +1,9 @@
 ﻿// Benchmark for count_u8.h
 //
-// SPDX-FileCopyrightText: Copyright (c) Takayuki Matsuoka
-// SPDX-License-Identifier: CC0-1.0
-// https://creativecommons.org/share-your-work/public-domain/cc0/
+//  SPDX-FileCopyrightText: Copyright (c) Takayuki Matsuoka
+//  SPDX-License-Identifier: CC0-1.0
+//  https://spdx.org/licenses/CC0-1.0
+//  https://creativecommons.org/publicdomain/zero/1.0/
 
 #include "count_u8.h"
 #include <stdio.h>
@@ -11,7 +12,7 @@
 static void fillRandom(uint8_t* mem, size_t size, uint64_t seed) {
     uint64_t y = seed;
     for(size_t i = 0; i < size; ++i) {
-        y ^= y << 11;	// xorshift PRNG
+        y ^= y << 11;   // xorshift PRNG
         y ^= y >> 31;
         y ^= y << 18;
         mem[i] = (uint8_t) y;
