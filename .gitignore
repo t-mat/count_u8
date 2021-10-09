@@ -1,3 +1,4 @@
 *.o
 
 count_u8_bench
+count_u8_bench_cpp
