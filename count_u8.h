@@ -121,7 +121,7 @@ static inline size_t count_u8_sse2(const void* src, size_t srcSize, uint8_t valu
 
             const uint8_t*  prefetchPtr     = p + prefetchLen;
 #if defined(_MSC_VER)
-            _mm_prefetch(prefetchPtr, _MM_HINT_T0);
+            _mm_prefetch((const char*) prefetchPtr, _MM_HINT_T0);
 #elif defined(__GNUC__)
             __builtin_prefetch(prefetchPtr, 0, 3);
 #else
