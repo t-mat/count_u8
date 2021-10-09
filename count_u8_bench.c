@@ -7,7 +7,43 @@
 
 #include "count_u8.h"
 #include <stdio.h>
-#include <time.h>       // clock(), clock_t
+
+#if _MSC_VER
+#  include <windows.h>
+typedef uint64_t clock_t;
+#else
+#  include <time.h>       // clock(), clock_t
+#endif
+
+static clock_t start_clock(void) {
+#if _MSC_VER
+    LARGE_INTEGER li;
+    QueryPerformanceCounter(&li);
+    return li.QuadPart;
+#else
+    clock_t t = clock();
+    for(;;) {
+        clock_t s = clock();
+        if(s != t) {
+            return s;
+        }
+    }
+#endif
+}
+
+static double end_clock(clock_t start) {
+#if _MSC_VER
+    LARGE_INTEGER end;
+    QueryPerformanceCounter(&end);
+
+    LARGE_INTEGER freq;
+    QueryPerformanceFrequency(&freq);
+
+    return (double) (end.QuadPart - start) / (double) freq.QuadPart;
+#else
+    return (clock() - start) / ((double) CLOCKS_PER_SEC);
+#endif
+}
 
 static void fillRandom(uint8_t* mem, size_t size, uint64_t seed) {
     uint64_t y = seed;
@@ -17,20 +53,6 @@ static void fillRandom(uint8_t* mem, size_t size, uint64_t seed) {
         y ^= y << 18;
         mem[i] = (uint8_t) y;
     }
-}
-
-static clock_t start_clock(void) {
-    clock_t t = clock();
-    for(;;) {
-        clock_t s = clock();
-        if(s != t) {
-            return s;
-        }
-    }
-}
-
-static double end_clock(clock_t start) {
-    return (clock() - start) / ((double) CLOCKS_PER_SEC);
 }
 
 static void bench(uint8_t* mem, size_t size) {
