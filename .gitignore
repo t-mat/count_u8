@@ -1,0 +1,3 @@
+*.o
+
+count_u8_bench
