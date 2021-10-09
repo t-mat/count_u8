@@ -20,7 +20,7 @@ bench: count_u8_bench count_u8_bench_cpp
 	./count_u8_bench_cpp
 
 count_u8_bench: $(OBJFILES)
-	$(CC) count_u8_bench.c -o $@
+	$(CC) -o $@ $^
 
 count_u8_bench_cpp: $(OBJFILES)
-	$(CXX) count_u8_bench.c -o $@
+	$(CXX) -o $@ $^
