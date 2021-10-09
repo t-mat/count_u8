@@ -4,7 +4,7 @@ default: all
 
 SRCFILES = $(wildcard ./*.c)
 OBJFILES = $(SRCFILES:.c=.o)
-CFLAGS  ?= -O3
+CFLAGS  ?= -O3 -std=c99
 
 $(V)$(VERBOSE).SILENT:  # V=1 or VERBOSE=1 enables verbose mode.
 
