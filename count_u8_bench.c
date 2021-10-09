@@ -117,7 +117,7 @@ int main(int argc, char** argv) {
     const size_t size = 1024 * 1024 * 16;
     const size_t alignment = 65536;
     void* mem = _mm_malloc(size, alignment);
-    bench(mem, size);
+    bench((uint8_t*) mem, size);
     _mm_free(mem);
     return 0;
 }
