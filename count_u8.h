@@ -139,7 +139,7 @@ static inline size_t count_u8_sse2(const void* src, size_t srcSize, uint8_t valu
             sum3_64x2 = _mm_add_epi64(sum3_64x2, horsum3_64x2);
         }
 
-        __m128i sumt_64x2
+        __m128i sumt_64x2;
         sumt_64x2 = _mm_add_epi64(sum0_64x2, sum1_64x2);
         sumt_64x2 = _mm_add_epi64(sumt_64x2, sum2_64x2);
         sumt_64x2 = _mm_add_epi64(sumt_64x2, sum3_64x2);
