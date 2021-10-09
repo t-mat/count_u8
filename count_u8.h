@@ -112,13 +112,7 @@ static inline size_t count_u8_sse2(const void* src, size_t srcSize, uint8_t valu
         const __m128i   c_8x16      = _mm_set1_epi8((char) value);
         const __m128i   ofs_8x16    = _mm_set1_epi8((char) ofs);
 
-        for(const uint8_t* p = data; p != endOfSimdPart; p += bytesPerLoop) {
-            const __m128i*  m               = (const __m128i *) p;
-            const __m128i   cmp0_8x16       = _mm_cmpeq_epi8(c_8x16, _mm_loadu_si128(m  ));
-            const __m128i   cmp1_8x16       = _mm_cmpeq_epi8(c_8x16, _mm_loadu_si128(m+1));
-            const __m128i   cmp2_8x16       = _mm_cmpeq_epi8(c_8x16, _mm_loadu_si128(m+2));
-            const __m128i   cmp3_8x16       = _mm_cmpeq_epi8(c_8x16, _mm_loadu_si128(m+3));
-
+        for(const uint8_t* p = data; p < endOfSimdPart; p += bytesPerLoop) {
             const uint8_t*  prefetchPtr     = p + prefetchLen;
 #if defined(_MSC_VER)
             _mm_prefetch((const char*) prefetchPtr, _MM_HINT_T0);
@@ -127,6 +121,12 @@ static inline size_t count_u8_sse2(const void* src, size_t srcSize, uint8_t valu
 #else
 #  error
 #endif
+
+            const __m128i*  m               = (const __m128i *) p;
+            const __m128i   cmp0_8x16       = _mm_cmpeq_epi8(c_8x16, _mm_loadu_si128(m  ));
+            const __m128i   cmp1_8x16       = _mm_cmpeq_epi8(c_8x16, _mm_loadu_si128(m+1));
+            const __m128i   cmp2_8x16       = _mm_cmpeq_epi8(c_8x16, _mm_loadu_si128(m+2));
+            const __m128i   cmp3_8x16       = _mm_cmpeq_epi8(c_8x16, _mm_loadu_si128(m+3));
 
             const __m128i   horsum0_64x2    = _mm_sad_epu8(cmp0_8x16, ofs_8x16);
             const __m128i   horsum1_64x2    = _mm_sad_epu8(cmp1_8x16, ofs_8x16);
@@ -139,19 +139,19 @@ static inline size_t count_u8_sse2(const void* src, size_t srcSize, uint8_t valu
             sum3_64x2 = _mm_add_epi64(sum3_64x2, horsum3_64x2);
         }
 
-        uint64_t counters0[2]; _mm_storeu_si128((__m128i*) counters0, sum0_64x2);
-        uint64_t counters1[2]; _mm_storeu_si128((__m128i*) counters1, sum1_64x2);
-        uint64_t counters2[2]; _mm_storeu_si128((__m128i*) counters2, sum2_64x2);
-        uint64_t counters3[2]; _mm_storeu_si128((__m128i*) counters3, sum3_64x2);
+        __m128i sumt_64x2
+        sumt_64x2 = _mm_add_epi64(sum0_64x2, sum1_64x2);
+        sumt_64x2 = _mm_add_epi64(sumt_64x2, sum2_64x2);
+        sumt_64x2 = _mm_add_epi64(sumt_64x2, sum3_64x2);
 
-        simdPartCounter  = (counters0[0] + counters0[1]);
-        simdPartCounter += (counters1[0] + counters1[1]);
-        simdPartCounter += (counters2[0] + counters2[1]);
-        simdPartCounter += (counters3[0] + counters3[1]);
+        uint64_t counters[2];
+        _mm_storeu_si128((__m128i*) counters, sumt_64x2);
+
+        simdPartCounter  = (counters[0] + counters[1]);
     }
 
     uint64_t lastPartCounter = 0;
-    for(const uint8_t* q = endOfSimdPart; q != endOfData; ++q) {
+    for(const uint8_t* q = endOfSimdPart; q < endOfData; ++q) {
         lastPartCounter += (*q == value) ? 1 : 0;
     }
 
