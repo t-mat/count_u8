@@ -11,7 +11,7 @@
 //      uint16_t value = 0x4251;
 //      size_t numElem = count_u16(buf, bufSize, value);
 //
-//  count_u8() automatically detect supported instruction by compiler's
+//  count_u16() automatically detect supported instruction by compiler's
 //  predefined symbols such as __SSE2__, _M_X64.
 //
 //
@@ -42,10 +42,10 @@
 #endif
 
 // Scalar
-static inline size_t count_u16_scalar(const void* src, size_t srcSize, uint16_t value) {
+static inline size_t count_u16_scalar(const void* src, size_t srcSizeInBytes, uint16_t value) {
     size_t counter = 0;
     const uint16_t* const data = (const uint16_t*) src;
-    for(size_t i = 0; i < srcSize/2; ++i) {
+    for(size_t i = 0; i < srcSizeInBytes/2; ++i) {
         if(data[i] == value) {
             counter += 1;
         }
@@ -55,10 +55,11 @@ static inline size_t count_u16_scalar(const void* src, size_t srcSize, uint16_t 
 
 
 // SSE2
-static inline size_t count_u16_sse2(const void* src, size_t srcSize, uint16_t value) {
+static inline size_t count_u16_sse2(const void* src, size_t srcSizeInBytes, uint16_t value) {
     const uint64_t          bytesPerLoop    = 16 * 4;
     const int               prefetchLen     = 4096;
 
+    const uint64_t          srcSize         = srcSizeInBytes & (~1);
     const uint8_t* const    data            = (const uint8_t*) src;
     const uint8_t* const    endOfData       = data + srcSize;
     const uint8_t* const    endOfSimdPart   = endOfData - (srcSize % bytesPerLoop);
@@ -132,7 +133,7 @@ static inline size_t count_u16_sse2(const void* src, size_t srcSize, uint16_t va
     }
 
     uint64_t lastPartCounter = 0;
-    for(const uint8_t* q = endOfSimdPart; q < endOfData; ++q) {
+    for(const uint16_t* q = (const uint16_t*) endOfSimdPart; q < (const uint16_t*) endOfData; ++q) {
         lastPartCounter += (*q == value) ? 1 : 0;
     }
 
