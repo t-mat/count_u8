@@ -15,12 +15,6 @@
 //  predefined symbols such as __SSE2__, _M_X64.
 //
 //
-// # Benchmark
-//
-//      scalar in 2.15700 sec, speed  100.00%
-//      SSE2   in 0.13500 sec, speed 1597.78%
-//
-//
 // # References
 //
 // - Intel Intrinsics Guide

@@ -12,15 +12,15 @@ all: bench
 
 clean:
 	$(RM) $(OBJFILES)
-	$(RM) count_u8_bench
-	$(RM) count_u8_bench_cpp
+	$(RM) count_bench
+	$(RM) count_bench_cpp
 
-bench: count_u8_bench count_u8_bench_cpp
-	./count_u8_bench
-	./count_u8_bench_cpp
+bench: count_bench count_bench_cpp
+	echo count_bench     && ./count_bench
+	echo count_bench_cpp && ./count_bench_cpp
 
-count_u8_bench: $(OBJFILES)
+count_bench: $(OBJFILES)
 	$(CC) -o $@ $^
 
-count_u8_bench_cpp: $(OBJFILES)
+count_bench_cpp: $(OBJFILES)
 	$(CXX) -o $@ $^
