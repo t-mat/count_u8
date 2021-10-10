@@ -1,4 +1,5 @@
 *.o
+*.s
 
 count_bench
 count_bench_cpp
