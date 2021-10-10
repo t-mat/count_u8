@@ -41,16 +41,58 @@
 #  error
 #endif
 
-// Scalar
-static inline size_t count_u16_scalar(const void* src, size_t srcSizeInBytes, uint16_t value) {
+// Scalar (naive)
+static inline size_t count_u16_scalar_naive(const void* src, size_t srcSizeInBytes, uint16_t value) {
     size_t counter = 0;
     const uint16_t* const data = (const uint16_t*) src;
-    for(size_t i = 0; i < srcSizeInBytes/2; ++i) {
+    for(size_t i = 0; i < srcSizeInBytes/sizeof(*data); ++i) {
         if(data[i] == value) {
             counter += 1;
         }
     }
     return counter;
+}
+
+
+// Scalar (int loop counter)
+static inline size_t count_u16_scalar_intloop(const void* src, size_t srcSizeInBytes, uint16_t value) {
+    uint64_t counter = 0;
+
+    const uint16_t* data = (const uint16_t*) src;
+
+    for(uint64_t nd = (uint64_t) srcSizeInBytes/sizeof(*data); nd > 0; ) {
+        int32_t n;
+
+        const uint64_t nMax = INT32_MAX;
+        if(nd < nMax) {
+            n = (int) nd;
+        } else {
+            n = (int) nMax;
+        }
+        nd -= n;
+
+        // "int32_t" for finding and loop counter helps compiler's optimization (gcc, clang).
+        int32_t cnt = 0;
+        for(int32_t i = 0; i < n; ++i) {
+            if(data[i] == value) {
+                cnt += 1;
+            }
+        }
+        data += n;
+        counter += (uint64_t) cnt;
+    }
+
+    return (size_t) counter;
+}
+
+
+// Scalar
+static inline size_t count_u16_scalar(const void* src, size_t srcSizeInBytes, uint16_t value) {
+#if _MSC_VER
+    return count_u16_scalar_naive(src, srcSizeInBytes, value);
+#else
+    return count_u16_scalar_intloop(src, srcSizeInBytes, value);
+#endif
 }
 
 
@@ -120,6 +162,7 @@ static inline size_t count_u16_sse2(const void* src, size_t srcSizeInBytes, uint
             sum3_32x4 = _mm_add_epi32(sum3_32x4, horsum3_32x4);
         }
 
+#if 0
         __m128i sumt_32x4;
         sumt_32x4 = _mm_add_epi32(sum0_32x4, sum1_32x4);
         sumt_32x4 = _mm_add_epi32(sumt_32x4, sum2_32x4);
@@ -127,9 +170,19 @@ static inline size_t count_u16_sse2(const void* src, size_t srcSizeInBytes, uint
 
         uint32_t counters[4];
         _mm_storeu_si128((__m128i*) counters, sumt_32x4);
-
         simdPartCounter  = (uint64_t) counters[0] + (uint64_t) counters[1];
         simdPartCounter += (uint64_t) counters[2] + (uint64_t) counters[3];
+#else
+        uint32_t counters[4][4];
+        _mm_storeu_si128((__m128i*) &counters[0], sum0_32x4);
+        _mm_storeu_si128((__m128i*) &counters[1], sum1_32x4);
+        _mm_storeu_si128((__m128i*) &counters[2], sum2_32x4);
+        _mm_storeu_si128((__m128i*) &counters[3], sum3_32x4);
+        for(int i = 0; i < 4; ++i) {
+            simdPartCounter += (uint64_t) (counters[i][0]) + (uint64_t) (counters[i][1]);
+            simdPartCounter += (uint64_t) (counters[i][2]) + (uint64_t) (counters[i][3]);
+        }
+#endif
     }
 
     uint64_t lastPartCounter = 0;

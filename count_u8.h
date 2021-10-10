@@ -32,6 +32,7 @@
 #define COUNT_U8_H
 
 #include <stdint.h>
+#include <limits.h>
 
 #if defined(_MSC_VER)
 #  include <intrin.h>
@@ -41,16 +42,55 @@
 #  error
 #endif
 
-// Scalar
-static inline size_t count_u8_scalar(const void* src, size_t srcSize, uint8_t value) {
-    size_t counter = 0;
-    const uint8_t* const data = (const uint8_t*) src;
+// Scalar (naive)
+static inline size_t count_u8_scalar_naive(const void* src, size_t srcSize, uint8_t value) {
+    const uint8_t* data = (const uint8_t*) src;
+    uint64_t counter = 0;
     for(size_t i = 0; i < srcSize; ++i) {
-        if(data[i] == value) {
-            counter += 1;
-        }
+        counter += (data[i] == value) ? 1 : 0;
     }
-    return counter;
+    return (size_t) counter;
+}
+
+
+// Scalar (int loop counter)
+static inline size_t count_u8_scalar_intloop(const void* src, size_t srcSizeInBytes, uint8_t value) {
+    uint64_t counter = 0;
+
+    const uint8_t* data = (const uint8_t*) src;
+    for(uint64_t nd = (uint64_t) srcSizeInBytes/sizeof(*data); nd > 0; ) {
+        int32_t n;
+
+        const uint64_t nMax = INT32_MAX;
+        if(nd < nMax) {
+            n = (int) nd;
+        } else {
+            n = (int) nMax;
+        }
+        nd -= n;
+
+        // "int32_t" for finding and loop counter helps compiler's optimization (gcc, clang).
+        int32_t cnt = 0;
+        for(int32_t i = 0; i < n; ++i) {
+            if(data[i] == value) {
+                cnt += 1;
+            }
+        }
+        data += n;
+        counter += (uint64_t) cnt;
+    }
+
+    return (size_t) counter;
+}
+
+
+// Scalar
+static inline size_t count_u8_scalar(const void* src, size_t srcSizeInBytes, uint8_t value) {
+#if _MSC_VER
+	return count_u8_scalar_naive(src, srcSizeInBytes, value);
+#else
+	return count_u8_scalar_intloop(src, srcSizeInBytes, value);
+#endif
 }
 
 
