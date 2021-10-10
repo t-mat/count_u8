@@ -58,47 +58,49 @@ static void fillRandom(uint8_t* mem, size_t size, uint64_t seed) {
 static void bench(uint8_t* mem, size_t size) {
     fillRandom(mem, size, 0x0123456789abcdefULL);
 
+    enum { nValue = 256 };
+
     // Scalar
-    uint64_t scalar_counters[256] = { 0 };
+    static size_t scalar_counters[nValue] = { 0 };
     double scalar_duration = 0;
     {
         clock_t start = start_clock();
-        for(int target = 0; target <= 0xff; ++target) {
-            scalar_counters[target] = count_u8_scalar(mem, size, target);
+        for(int v = 0; v < nValue; ++v) {
+            scalar_counters[v] = count_u8_scalar(mem, size, (uint8_t) v);
         }
         scalar_duration = end_clock(start);
     }
 
     // SSE2
-    uint64_t sse2_counters[256] = { 0 };
+    static size_t sse2_counters[nValue] = { 0 };
     double sse2_duration = 0;
     {
         clock_t start = start_clock();
-        for(int target = 0; target <= 0xff; ++target) {
-            sse2_counters[target] = count_u8_sse2(mem, size, target);
+        for(int v = 0; v < nValue; ++v) {
+            sse2_counters[v] = count_u8_sse2(mem, size, (uint8_t) v);
         }
         sse2_duration = end_clock(start);
     }
 
     // Default
-    uint64_t default_counters[256] = { 0 };
+    static size_t default_counters[nValue] = { 0 };
     double default_duration = 0;
     {
         clock_t start = start_clock();
-        for(int target = 0; target <= 0xff; ++target) {
-            default_counters[target] = count_u8(mem, size, target);
+        for(int v = 0; v < nValue; ++v) {
+            default_counters[v] = count_u8(mem, size, (uint8_t) v);
         }
         default_duration = end_clock(start);
     }
 
     // Verify
-    for(int i = 0; i < 256; ++i) {
+    for(int i = 0; i < nValue; ++i) {
         if(scalar_counters[i] != sse2_counters[i]) {
             printf("Error: i=%3d, scalar=%10zd, sse2=%10zd\n", i, scalar_counters[i], sse2_counters[i]);
         }
     }
 
-    for(int i = 0; i < 256; ++i) {
+    for(int i = 0; i < nValue; ++i) {
         if(scalar_counters[i] != default_counters[i]) {
             printf("Error: i=%3d, scalar=%10zd, default=%10zd\n", i, scalar_counters[i], default_counters[i]);
         }
