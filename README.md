@@ -1,5 +1,5 @@
 # count_u8
-Count the number of uint8_t elements in memory region.  Header-only library in C99.  Optimized for SSE2.
+Count the number of uint8_t or uint16_t elements in memory region.  Header-only library in C99.  Optimized for SSE2.
 
 ## Usage
 
@@ -18,7 +18,22 @@ void test() {
 }
 ```
 
-`count_u8()` automatically detect supported instruction by compiler's
+```c
+#include "count_u16.h"
+
+void test() {
+    size_t bufSize = 65536;
+    uint8_t* buf = (uint8_t*) malloc(bufSize);
+
+    ... set_some_values(buf, bufSize); ...
+
+    uint16_t value = 0x4251;
+    size_t numElem = count_u16(buf, bufSize, value);
+    printf("numElem for %04x = %zd\n", value, numElem);
+}
+```
+
+`count_u8()` and `count_u16()` automatically detect SSE2 by compiler's
 predefined symbols such as `__SSE2__`, `_M_X64`.
 
 
@@ -27,34 +42,30 @@ predefined symbols such as `__SSE2__`, `_M_X64`.
 ### gcc
 
 ```
-$ gcc-11 -O3 count_u8_bench.c && ./a.out
-Scalar  in 1.75201 sec, speed  100.00%
-SSE2    in 0.18753 sec, speed  934.26%
-Default in 0.19031 sec, speed  920.61%
-```
-
-```
-$ gcc-9 -O3 count_u8_bench.c && ./a.out
-Scalar  in 1.85213 sec, speed  100.00%
-SSE2    in 0.14778 sec, speed 1253.31%
-Default in 0.15283 sec, speed 1211.86%
+$ CC=gcc-10 make clean all
+bench_u8()
+Scalar  in 1.19409 sec, speed  100.00%
+SSE2    in 0.13273 sec, speed  899.64%
+Default in 0.12824 sec, speed  931.10%
+bench_u16()
+Scalar  in 2.37073 sec, speed  100.00%
+SSE2    in 0.32686 sec, speed  725.30%
+Default in 0.32399 sec, speed  731.73%
 ```
 
 
 ### clang
 
 ```
-$ clang-12 -O3 count_u8_bench.c && ./a.out
-Scalar  in 3.50516 sec, speed  100.00%
-SSE2    in 0.15010 sec, speed 2335.19%
-Default in 0.15099 sec, speed 2321.46%
-```
-
-```
-$ clang-10 -O3 count_u8_bench.c && ./a.out
-Scalar  in 2.87657 sec, speed  100.00%
-SSE2    in 0.16849 sec, speed 1707.28%
-Default in 0.16848 sec, speed 1707.33%
+$ CC=clang-12 make clean all
+bench_u8()
+Scalar  in 2.16803 sec, speed  100.00%
+SSE2    in 0.13012 sec, speed 1666.12%
+Default in 0.12546 sec, speed 1728.04%
+bench_u16()
+Scalar  in 2.09604 sec, speed  100.00%
+SSE2    in 0.29672 sec, speed  706.40%
+Default in 0.29899 sec, speed  701.04%
 ```
 
 
@@ -62,7 +73,12 @@ Default in 0.16848 sec, speed 1707.33%
 
 ```
 # MSVC 2019
-Scalar  in 2.19493 sec, speed  100.00%
-SSE2    in 0.15442 sec, speed 1421.39%
-Default in 0.15047 sec, speed 1458.67%
+bench_u8()
+Scalar  in 2.21406 sec, speed  100.00%
+SSE2    in 0.13927 sec, speed 1589.77%
+Default in 0.13581 sec, speed 1630.31%
+bench_u16()
+Scalar  in 4.30308 sec, speed  100.00%
+SSE2    in 0.28564 sec, speed 1506.49%
+Default in 0.28825 sec, speed 1492.82%
 ```
