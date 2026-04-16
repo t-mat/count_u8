@@ -1,5 +1,5 @@
 ﻿// Count the number of uint8_t elements in memory region.
-// Header-only library in C99.  Optimized for SSE2.
+// Header-only library in C99.  Optimized for SSE2 / AVX2.
 //
 // # Usage
 //
@@ -12,7 +12,7 @@
 //      size_t numElem = count_u8(buf, bufSize, value);
 //
 //  count_u8() automatically detect supported instruction by compiler's
-//  predefined symbols such as __SSE2__, _M_X64.
+//  predefined symbols such as __AVX2__, __SSE2__, _M_X64.
 //
 //
 // # References
@@ -87,9 +87,9 @@ static inline size_t count_u8_scalar_intloop(const void* src, size_t srcSizeInBy
 // Scalar
 static inline size_t count_u8_scalar(const void* src, size_t srcSizeInBytes, uint8_t value) {
 #if _MSC_VER
-	return count_u8_scalar_naive(src, srcSizeInBytes, value);
+    return count_u8_scalar_naive(src, srcSizeInBytes, value);
 #else
-	return count_u8_scalar_intloop(src, srcSizeInBytes, value);
+    return count_u8_scalar_intloop(src, srcSizeInBytes, value);
 #endif
 }
 
@@ -193,11 +193,88 @@ static inline size_t count_u8_sse2(const void* src, size_t srcSize, uint8_t valu
 }
 
 
-// "Default".  Select SSE2 if it's available.
+// AVX2
+//
+//  Same SAD-offset trick as count_u8_sse2, widened to 256-bit registers.
+//  _mm256_sad_epu8 produces four 64-bit partial sums per 32-byte input,
+//  so simdPartOffset = ofs * bytesPerLoop * numLoop still accounts for the
+//  entire accumulated bias across all lanes of all four accumulators.
+#if defined(__AVX2__)
+static inline size_t count_u8_avx2(const void* src, size_t srcSize, uint8_t value) {
+    const uint64_t          bytesPerLoop    = 32 * 4;
+    const int               prefetchLen     = 4096;
+
+    const uint8_t* const    data            = (const uint8_t*) src;
+    const uint8_t* const    endOfData       = data + srcSize;
+    const uint8_t* const    endOfSimdPart   = endOfData - (srcSize % bytesPerLoop);
+    const uint64_t          numLoop         = (endOfSimdPart - data) / bytesPerLoop;
+    const uint64_t          ofs             = 0x7f;
+    const uint64_t          simdPartOffset  = ofs * bytesPerLoop * numLoop;
+
+    uint64_t simdPartCounter = 0;
+    {
+        __m256i         sum0_64x4   = _mm256_setzero_si256();
+        __m256i         sum1_64x4   = _mm256_setzero_si256();
+        __m256i         sum2_64x4   = _mm256_setzero_si256();
+        __m256i         sum3_64x4   = _mm256_setzero_si256();
+        const __m256i   c_8x32      = _mm256_set1_epi8((char) value);
+        const __m256i   ofs_8x32    = _mm256_set1_epi8((char) ofs);
+
+        for(const uint8_t* p = data; p < endOfSimdPart; p += bytesPerLoop) {
+            const uint8_t*  prefetchPtr     = p + prefetchLen;
+#if defined(_MSC_VER)
+            _mm_prefetch((const char*) prefetchPtr, _MM_HINT_T0);
+#elif defined(__GNUC__)
+            __builtin_prefetch(prefetchPtr, 0, 3);
+#else
+#  error
+#endif
+
+            const __m256i*  m               = (const __m256i *) p;
+            const __m256i   cmp0_8x32       = _mm256_cmpeq_epi8(c_8x32, _mm256_loadu_si256(m  ));
+            const __m256i   cmp1_8x32       = _mm256_cmpeq_epi8(c_8x32, _mm256_loadu_si256(m+1));
+            const __m256i   cmp2_8x32       = _mm256_cmpeq_epi8(c_8x32, _mm256_loadu_si256(m+2));
+            const __m256i   cmp3_8x32       = _mm256_cmpeq_epi8(c_8x32, _mm256_loadu_si256(m+3));
+
+            const __m256i   horsum0_64x4    = _mm256_sad_epu8(cmp0_8x32, ofs_8x32);
+            const __m256i   horsum1_64x4    = _mm256_sad_epu8(cmp1_8x32, ofs_8x32);
+            const __m256i   horsum2_64x4    = _mm256_sad_epu8(cmp2_8x32, ofs_8x32);
+            const __m256i   horsum3_64x4    = _mm256_sad_epu8(cmp3_8x32, ofs_8x32);
+
+            sum0_64x4 = _mm256_add_epi64(sum0_64x4, horsum0_64x4);
+            sum1_64x4 = _mm256_add_epi64(sum1_64x4, horsum1_64x4);
+            sum2_64x4 = _mm256_add_epi64(sum2_64x4, horsum2_64x4);
+            sum3_64x4 = _mm256_add_epi64(sum3_64x4, horsum3_64x4);
+        }
+
+        __m256i sumt_64x4;
+        sumt_64x4 = _mm256_add_epi64(sum0_64x4, sum1_64x4);
+        sumt_64x4 = _mm256_add_epi64(sumt_64x4, sum2_64x4);
+        sumt_64x4 = _mm256_add_epi64(sumt_64x4, sum3_64x4);
+
+        uint64_t counters[4];
+        _mm256_storeu_si256((__m256i*) counters, sumt_64x4);
+
+        simdPartCounter = counters[0] + counters[1] + counters[2] + counters[3];
+    }
+
+    uint64_t lastPartCounter = 0;
+    for(const uint8_t* q = endOfSimdPart; q < endOfData; ++q) {
+        lastPartCounter += (*q == value) ? 1 : 0;
+    }
+
+    return (size_t) (simdPartCounter - simdPartOffset + lastPartCounter);
+}
+#endif // __AVX2__
+
+
+// "Default".  Select AVX2 / SSE2 if it's available.
 static inline size_t count_u8(const void* src, size_t srcSize, uint8_t value) {
-#if defined(__SSE2__)   /* generic */ \
- || defined(__x86_64__) /* gcc */ \
- || defined(_M_X64)     /* MSVC, https://docs.microsoft.com/en-us/cpp/preprocessor/predefined-macros */
+#if defined(__AVX2__)
+    return count_u8_avx2(src, srcSize, value);
+#elif defined(__SSE2__)   /* generic */ \
+   || defined(__x86_64__) /* gcc */ \
+   || defined(_M_X64)     /* MSVC, https://docs.microsoft.com/en-us/cpp/preprocessor/predefined-macros */
     return count_u8_sse2(src, srcSize, value);
 #else
     return count_u8_scalar(src, srcSize, value);

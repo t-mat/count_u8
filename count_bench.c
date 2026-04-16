@@ -111,6 +111,19 @@ static void bench_u8(uint8_t* mem, size_t memSizeInBytes) {
         sse2_duration = end_clock(start);
     }
 
+#if defined(__AVX2__)
+    // AVX2
+    static size_t avx2_counters[nValue] = { 0 };
+    double avx2_duration = 0;
+    {
+        clock_t start = start_clock();
+        for(int v = 0; v < nValue; ++v) {
+            avx2_counters[v] = count_u8_avx2(mem, memSizeInBytes, (uint8_t) v);
+        }
+        avx2_duration = end_clock(start);
+    }
+#endif
+
     // Default
     static size_t default_counters[nValue] = { 0 };
     double default_duration = 0;
@@ -141,6 +154,14 @@ static void bench_u8(uint8_t* mem, size_t memSizeInBytes) {
         }
     }
 
+#if defined(__AVX2__)
+    for(int i = 0; i < nValue; ++i) {
+        if(naive_counters[i] != avx2_counters[i]) {
+            printf("Error: i=%3d, naive=%10zd, avx2=%10zd\n", i, naive_counters[i], avx2_counters[i]);
+        }
+    }
+#endif
+
     for(int i = 0; i < nValue; ++i) {
         if(naive_counters[i] != default_counters[i]) {
             printf("Error: i=%3d, naive=%10zd, default=%10zd\n", i, naive_counters[i], default_counters[i]);
@@ -152,6 +173,9 @@ static void bench_u8(uint8_t* mem, size_t memSizeInBytes) {
     printf("IntLoop in%8.5f sec, speed%8.2f%%\n", intloop_duration, 100.0 * scalar_duration / intloop_duration);
     printf("Scalar  in%8.5f sec, speed%8.2f%%\n", scalar_duration,  100.0 * scalar_duration / scalar_duration);
     printf("SSE2    in%8.5f sec, speed%8.2f%%\n", sse2_duration,    100.0 * scalar_duration / sse2_duration);
+#if defined(__AVX2__)
+    printf("AVX2    in%8.5f sec, speed%8.2f%%\n", avx2_duration,    100.0 * scalar_duration / avx2_duration);
+#endif
     printf("Default in%8.5f sec, speed%8.2f%%\n", default_duration, 100.0 * scalar_duration / default_duration);
 }
 
@@ -225,6 +249,20 @@ static void bench_u16(uint8_t* mem, size_t memSizeInBytes) {
         sse2_duration = end_clock(start);
     }
 
+#if defined(__AVX2__)
+    // AVX2
+    static size_t avx2_counters[nValue] = { 0 };
+    double avx2_duration = 0;
+    {
+        clock_t start = start_clock();
+        for(int value = 0; value < nValue; ++value) {
+            const uint32_t vl = value * mult;
+            avx2_counters[value] = count_u16_avx2(mem, memSizeInBytes, vl);
+        }
+        avx2_duration = end_clock(start);
+    }
+#endif
+
     // Default
     static size_t default_counters[nValue] = { 0 };
     double default_duration = 0;
@@ -256,6 +294,14 @@ static void bench_u16(uint8_t* mem, size_t memSizeInBytes) {
         }
     }
 
+#if defined(__AVX2__)
+    for(int i = 0; i < nValue; ++i) {
+        if(naive_counters[i] != avx2_counters[i]) {
+            printf("Error: i=%3d, naive=%10zd, avx2=%10zd\n", i, naive_counters[i], avx2_counters[i]);
+        }
+    }
+#endif
+
     for(int i = 0; i < nValue; ++i) {
         if(naive_counters[i] != default_counters[i]) {
             printf("Error: i=%3d, naive=%10zd, default=%10zd\n", i, naive_counters[i], default_counters[i]);
@@ -267,6 +313,9 @@ static void bench_u16(uint8_t* mem, size_t memSizeInBytes) {
     printf("IntLoop in%8.5f sec, speed%8.2f%%\n", intloop_duration, 100.0 * scalar_duration / intloop_duration);
     printf("Scalar  in%8.5f sec, speed%8.2f%%\n", scalar_duration,  100.0 * scalar_duration / scalar_duration);
     printf("SSE2    in%8.5f sec, speed%8.2f%%\n", sse2_duration,    100.0 * scalar_duration / sse2_duration);
+#if defined(__AVX2__)
+    printf("AVX2    in%8.5f sec, speed%8.2f%%\n", avx2_duration,    100.0 * scalar_duration / avx2_duration);
+#endif
     printf("Default in%8.5f sec, speed%8.2f%%\n", default_duration, 100.0 * scalar_duration / default_duration);
 }
 
@@ -286,7 +335,14 @@ int main(int argc, char** argv) {
     // Since MSVC doesn't have C11 standard aligned_alloc(),
     // we use _mm_malloc() and _mm_free().
     // See also: https://docs.microsoft.com/en-us/cpp/overview/visual-cpp-language-conformance?view=msvc-160#note_M
+#if 0
+	const size_t size = 1024 * 32;
+#elif 0
+	const size_t size = 1024 * 256;
+#else
     const size_t size = 1024 * 1024 * 32;
+#endif
+	printf("size = %zd KiBytes\n", size / 1024);
     const size_t alignment = 65536;
     void* mem = _mm_malloc(size, alignment);
     if(enable_bench_u8)  { bench_u8((uint8_t*) mem, size);  }
